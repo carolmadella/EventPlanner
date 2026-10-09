@@ -44,10 +44,13 @@ def ask_text(prompt, required=True):
         print("  This field is required. Please try again.")
 
 
-def ask_date(prompt):
-    """Ask for a date in YYYY-MM-DD format and check that it is a real date."""
+def ask_date(prompt, allow_blank=False):
+    """Ask for a date in YYYY-MM-DD format and check that it is a real date.
+    If allow_blank is True, pressing Enter returns an empty string."""
     while True:
         answer = input(prompt).strip()
+        if answer == "" and allow_blank:
+            return ""
         try:
             datetime.strptime(answer, DATE_FORMAT)
             return answer
@@ -129,6 +132,61 @@ def view_event_details(db):
     print(f"ID:          {doc.id}")
 
 
+def search_events_by_name(db):
+    """SEARCH: find events whose name contains the text the user types.
+    Firestore cannot search for words inside text, so we retrieve the
+    events and check each name in Python (ignoring upper/lower case)."""
+    print("\n--- Search Events by Name ---")
+    text = ask_text("Search for: ").lower()
+    matches = [doc for doc in get_all_events(db)
+               if text in doc.to_dict()["name"].lower()]
+    display_events(matches)
+
+
+def edit_event(db):
+    """MODIFY: change the fields of an existing event.
+    Pressing Enter keeps the current value."""
+    print("\n--- Edit an Event ---")
+    doc = choose_event(db)
+    if doc is None:
+        return
+    event = doc.to_dict()
+    print("\nPress Enter to keep the current value shown in [brackets].")
+
+    changes = {}
+    for field in ("name", "location", "description"):
+        current = event.get(field, "")
+        new_value = input(f"{field.capitalize()} [{current}]: ").strip()
+        if new_value:
+            changes[field] = new_value
+    new_date = ask_date(f"Date [{event['date']}]: ", allow_blank=True)
+    if new_date:
+        changes["date"] = new_date
+
+    if not changes:
+        print("No changes made.")
+        return
+    # update() only changes the fields we send; the others stay the same
+    doc.reference.update(changes)
+    print(f"Event updated: {', '.join(changes)} changed.")
+
+
+def delete_event(db):
+    """DELETE: remove an event after the user confirms."""
+    print("\n--- Delete an Event ---")
+    doc = choose_event(db)
+    if doc is None:
+        return
+    name = doc.to_dict()["name"]
+    confirm = input(f"Are you sure you want to delete '{name}'? (y/n): ").strip().lower()
+    if confirm != "y":
+        print("Delete cancelled.")
+        return
+    # Week 2: the event's guests will also be deleted here
+    doc.reference.delete()
+    print(f"Event '{name}' was deleted.")
+
+
 # ---------------------------------------------------------------
 # Main menu
 # ---------------------------------------------------------------
@@ -140,6 +198,9 @@ def show_menu():
     print("2. List all events")
     print("3. List upcoming events")
     print("4. View event details")
+    print("5. Search events by name")
+    print("6. Edit an event")
+    print("7. Delete an event")
     print("0. Exit")
 
 
@@ -162,6 +223,12 @@ def main():
             display_events(get_upcoming_events(db))
         elif choice == "4":
             view_event_details(db)
+        elif choice == "5":
+            search_events_by_name(db)
+        elif choice == "6":
+            edit_event(db)
+        elif choice == "7":
+            delete_event(db)
         elif choice == "0":
             print("Goodbye!")
             break
