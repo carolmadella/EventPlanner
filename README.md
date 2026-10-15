@@ -26,7 +26,7 @@ To run the program:
 
 My purpose for writing this software was to learn how a NoSQL cloud database works and how to insert, retrieve, query, modify, and delete data in it from a program. I also wanted to learn how to relate two collections to each other in a NoSQL database and how to handle a secret credential safely.
 
-[Software Demo Video](http://youtube.link.goes.here)
+[Software Demo Video](https://youtu.be/qUF-lGGbhq0)
 
 # Cloud Database
 
